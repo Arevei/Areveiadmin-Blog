@@ -21,6 +21,7 @@ export interface BlogPost {
   coverImageUrl: string;
   coverImageAlt?: string;
   contentHtml: string;
+  readTimeText: string;
   editorMode: EditorMode;
   authorName: string;
   authorRole: string;
@@ -89,6 +90,11 @@ const BlogPostSchema = new Schema<BlogPost, BlogPostModelType>(
     contentHtml: {
       type: String,
       required: true,
+    },
+    readTimeText: {
+      type: String,
+      trim: true,
+      default: "",
     },
     editorMode: {
       type: String,

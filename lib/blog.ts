@@ -1,6 +1,6 @@
 import sanitizeHtml from "sanitize-html";
 
-import type { BlogPostDocument } from "@/lib/models/blog-post";
+import type { BlogPost, BlogPostDocument } from "@/lib/models/blog-post";
 import { formatDate } from "@/lib/utils";
 
 const allowedTags = [
@@ -68,33 +68,90 @@ export function calculateReadTime(html: string) {
   return `${minutes} min read`;
 }
 
-export function serializePost(post: BlogPostDocument) {
+type BlogPostIdentity = {
+  _id?: { toString(): string } | string;
+  createdBy?: { toString(): string } | string;
+  updatedBy?: { toString(): string } | string;
+};
+
+type BlogPostBaseSource = Pick<
+  BlogPost,
+  | "slug"
+  | "title"
+  | "excerpt"
+  | "authorName"
+  | "category"
+  | "tags"
+  | "coverImageUrl"
+  | "coverImageAlt"
+  | "publishedAt"
+  | "updatedAt"
+  | "createdAt"
+  | "readTimeText"
+>;
+
+type BlogPostSummarySource = BlogPostBaseSource & BlogPostIdentity;
+
+type BlogPostDetailSource = BlogPostSummarySource &
+  Pick<
+    BlogPost,
+    "contentHtml" | "keyTakeaways" | "editorMode" | "authorRole" | "seoTitle" | "seoDescription" | "status"
+  >;
+
+function toStringId(value?: { toString(): string } | string) {
+  if (!value) return "";
+  return typeof value === "string" ? value : value.toString();
+}
+
+function resolvePublishedAt(post: Pick<BlogPost, "publishedAt" | "updatedAt" | "createdAt">) {
+  return post.publishedAt || post.updatedAt || post.createdAt;
+}
+
+function resolveReadTime(post: { readTimeText?: string; contentHtml?: string }) {
+  if (post.readTimeText?.trim()) {
+    return post.readTimeText;
+  }
+
+  return post.contentHtml ? calculateReadTime(post.contentHtml) : "1 min read";
+}
+
+export function serializePostCard(post: BlogPostSummarySource) {
   const publishedAt = post.publishedAt || post.updatedAt || post.createdAt;
 
   return {
-    id: post._id.toString(),
+    id: toStringId(post._id),
     slug: post.slug,
     title: post.title,
-    seoTitle: post.seoTitle || "",
-    seoDescription: post.seoDescription || "",
     excerpt: post.excerpt,
-    contentHtml: post.contentHtml,
     author: post.authorName,
-    authorRole: post.authorRole,
     date: formatDate(publishedAt),
-    publishedAt: publishedAt.toISOString(),
+    publishedAt: resolvePublishedAt(post).toISOString(),
     dateModified: post.updatedAt.toISOString(),
-    readTime: calculateReadTime(post.contentHtml),
+    readTime: resolveReadTime(post),
     category: post.category,
     tags: post.tags,
-    keyTakeaways: post.keyTakeaways,
     thumbnail: post.coverImageUrl,
     thumbnailAlt: post.coverImageAlt || post.title,
+  };
+}
+
+export function serializePost(post: BlogPostDetailSource | BlogPostDocument) {
+  const publishedAt = resolvePublishedAt(post);
+
+  return {
+    ...serializePostCard(post),
+    seoTitle: post.seoTitle || "",
+    seoDescription: post.seoDescription || "",
+    contentHtml: post.contentHtml,
+    authorRole: post.authorRole,
+    keyTakeaways: post.keyTakeaways,
     status: post.status,
     editorMode: post.editorMode,
-    createdBy: post.createdBy.toString(),
-    updatedBy: post.updatedBy.toString(),
+    createdBy: toStringId(post.createdBy),
+    updatedBy: toStringId(post.updatedBy),
     createdAt: post.createdAt.toISOString(),
     updatedAt: post.updatedAt.toISOString(),
+    publishedAt: publishedAt.toISOString(),
+    dateModified: post.updatedAt.toISOString(),
   };
 }

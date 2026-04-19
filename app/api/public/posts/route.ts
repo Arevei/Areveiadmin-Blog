@@ -1,6 +1,7 @@
 import { publicJson, publicOptions } from "@/lib/api";
-import { serializePost } from "@/lib/blog";
-import { getPublicPosts } from "@/lib/services/posts";
+import { getPublicPosts, serializePublicPostCards } from "@/lib/services/posts";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -8,7 +9,7 @@ export async function GET(request: Request) {
   const posts = await getPublicPosts(category);
 
   return publicJson({
-    posts: posts.map(serializePost),
+    posts: serializePublicPostCards(posts),
   });
 }
 

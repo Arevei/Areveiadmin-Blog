@@ -3,7 +3,7 @@ import { Types } from "mongoose";
 
 import { canDeletePost, canEditPost } from "@/lib/auth/permissions";
 import { getSession } from "@/lib/auth/session";
-import { sanitizeBlogHtml, serializePost } from "@/lib/blog";
+import { calculateReadTime, sanitizeBlogHtml, serializePost } from "@/lib/blog";
 import { jsonError } from "@/lib/api";
 import { connectToDatabase } from "@/lib/db";
 import { BlogPostModel } from "@/lib/models/blog-post";
@@ -86,7 +86,10 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   post.keyTakeaways = Array.from(new Set(parsed.data.keyTakeaways));
   post.coverImageUrl = parsed.data.coverImageUrl;
   post.coverImageAlt = parsed.data.coverImageAlt;
-  post.contentHtml = sanitizeBlogHtml(parsed.data.contentHtml);
+  const sanitizedHtml = sanitizeBlogHtml(parsed.data.contentHtml);
+
+  post.contentHtml = sanitizedHtml;
+  post.readTimeText = calculateReadTime(sanitizedHtml);
   post.editorMode = parsed.data.editorMode;
   post.authorName = parsed.data.authorName;
   post.authorRole = parsed.data.authorRole;

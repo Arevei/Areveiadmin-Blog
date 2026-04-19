@@ -2,7 +2,7 @@ import { Types } from "mongoose";
 import { NextResponse } from "next/server";
 
 import { getSession } from "@/lib/auth/session";
-import { sanitizeBlogHtml, serializePost } from "@/lib/blog";
+import { calculateReadTime, sanitizeBlogHtml, serializePost } from "@/lib/blog";
 import { jsonError } from "@/lib/api";
 import { connectToDatabase } from "@/lib/db";
 import { BlogPostModel } from "@/lib/models/blog-post";
@@ -51,11 +51,14 @@ export async function POST(request: Request) {
 
   const createdBy = new Types.ObjectId(session.userId);
 
+  const sanitizedHtml = sanitizeBlogHtml(parsed.data.contentHtml);
+
   const post = await BlogPostModel.create({
     ...parsed.data,
     tags: Array.from(new Set(parsed.data.tags)),
     keyTakeaways: Array.from(new Set(parsed.data.keyTakeaways)),
-    contentHtml: sanitizeBlogHtml(parsed.data.contentHtml),
+    contentHtml: sanitizedHtml,
+    readTimeText: calculateReadTime(sanitizedHtml),
     publishedAt:
       parsed.data.status === "PUBLISHED"
         ? parsed.data.publishedAt

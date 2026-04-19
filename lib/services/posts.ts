@@ -2,9 +2,85 @@ import { Types } from "mongoose";
 
 import type { SessionUser } from "@/lib/auth/session";
 import { canManageAllPosts } from "@/lib/auth/permissions";
-import { serializePost } from "@/lib/blog";
+import { calculateReadTime, serializePostCard } from "@/lib/blog";
 import { connectToDatabase } from "@/lib/db";
 import { BlogPostModel } from "@/lib/models/blog-post";
+
+type PublicPostCardRecord = {
+  _id: { toString(): string } | string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  authorName: string;
+  authorRole: string;
+  category: string;
+  tags: string[];
+  coverImageUrl: string;
+  coverImageAlt?: string;
+  publishedAt?: Date | null;
+  updatedAt: Date;
+  createdAt: Date;
+  readTimeText?: string;
+};
+
+const publicPostCardProjection = {
+  title: 1,
+  slug: 1,
+  excerpt: 1,
+  authorName: 1,
+  authorRole: 1,
+  category: 1,
+  tags: 1,
+  coverImageUrl: 1,
+  coverImageAlt: 1,
+  publishedAt: 1,
+  updatedAt: 1,
+  createdAt: 1,
+  readTimeText: 1,
+} as const;
+
+function normalizePublicSlug(slug: string) {
+  return decodeURIComponent(slug)
+    .trim()
+    .replace(/^\/+|\/+$/g, "")
+    .toLowerCase();
+}
+
+async function resolveMissingReadTimes(posts: PublicPostCardRecord[]) {
+  const missingIds = posts
+    .filter((post) => !post.readTimeText?.trim())
+    .map((post) => post._id);
+
+  if (missingIds.length === 0) {
+    return posts;
+  }
+
+  const legacyPosts = await BlogPostModel.find(
+    { _id: { $in: missingIds } },
+    { contentHtml: 1, readTimeText: 1 }
+  ).lean();
+
+  const readTimeById = new Map(
+    legacyPosts.map((post) => [
+      String(post._id),
+      post.readTimeText?.trim() ? post.readTimeText : calculateReadTime(post.contentHtml || ""),
+    ])
+  );
+
+  return posts.map((post) => ({
+    ...post,
+    readTimeText: post.readTimeText?.trim() || readTimeById.get(String(post._id)) || "1 min read",
+  }));
+}
+
+function normalizeProjectedCards(posts: PublicPostCardRecord[]) {
+  return posts.map((post) =>
+    serializePostCard({
+      ...post,
+      readTimeText: post.readTimeText || "1 min read",
+    })
+  );
+}
 
 export async function getAccessiblePosts(user: SessionUser) {
   await connectToDatabase();
@@ -39,12 +115,19 @@ export async function getPublicPosts(category?: string) {
 
   const filter = category ? { status: "PUBLISHED", category } : { status: "PUBLISHED" };
 
-  return BlogPostModel.find(filter).sort({ publishedAt: -1, updatedAt: -1 });
+  const posts = await BlogPostModel.find(filter, publicPostCardProjection)
+    .sort({ publishedAt: -1, updatedAt: -1 })
+    .lean();
+
+  return resolveMissingReadTimes(posts);
 }
 
 export async function getPublicPostBySlug(slug: string) {
   await connectToDatabase();
-  return BlogPostModel.findOne({ slug, status: "PUBLISHED" });
+  return BlogPostModel.findOne({
+    slug: normalizePublicSlug(slug),
+    status: "PUBLISHED",
+  });
 }
 
 export async function getRelatedPosts(slug: string, category: string, tags: string[], limit = 3) {
@@ -54,11 +137,12 @@ export async function getRelatedPosts(slug: string, category: string, tags: stri
     status: "PUBLISHED",
     slug: { $ne: slug },
     $or: [{ category }, { tags: { $in: tags } }],
-  })
+  }, publicPostCardProjection)
     .sort({ publishedAt: -1, updatedAt: -1 })
-    .limit(limit * 2);
+    .limit(limit * 2)
+    .lean();
 
-  return posts
+  return (await resolveMissingReadTimes(posts))
     .sort((left, right) => {
       const leftScore =
         Number(left.category === category) * 3 + left.tags.filter((tag) => tags.includes(tag)).length;
@@ -68,6 +152,9 @@ export async function getRelatedPosts(slug: string, category: string, tags: stri
 
       return rightScore - leftScore;
     })
-    .slice(0, limit)
-    .map(serializePost);
+    .slice(0, limit);
+}
+
+export function serializePublicPostCards(posts: PublicPostCardRecord[]) {
+  return normalizeProjectedCards(posts);
 }

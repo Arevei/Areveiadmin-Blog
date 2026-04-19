@@ -1,6 +1,8 @@
 import { publicJson, publicOptions } from "@/lib/api";
-import { getRelatedPosts, getPublicPostBySlug } from "@/lib/services/posts";
+import { getRelatedPosts, getPublicPostBySlug, serializePublicPostCards } from "@/lib/services/posts";
 import { serializePost } from "@/lib/blog";
+
+export const dynamic = "force-dynamic";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
@@ -19,7 +21,7 @@ export async function GET(_: Request, { params }: RouteContext) {
 
   return publicJson({
     post: serializePost(post),
-    relatedPosts,
+    relatedPosts: serializePublicPostCards(relatedPosts),
   });
 }
 
