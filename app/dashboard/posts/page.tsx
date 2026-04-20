@@ -27,7 +27,7 @@ export default async function PostsPage() {
 
         <Link
           href="/dashboard/posts/new"
-          className="inline-flex items-center justify-center rounded-full bg-[#10231c] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0f8b6d]"
+          className="inline-flex items-center justify-center rounded-full px-5 py-3 text-sm font-semibold text-white transition bg-[#0f8b6d]"
         >
           New post
         </Link>

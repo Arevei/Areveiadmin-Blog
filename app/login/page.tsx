@@ -22,12 +22,12 @@ export default async function LoginPage() {
             Arevei publishing suite
           </span>
           <h1 className="mt-6 max-w-2xl font-display text-5xl font-bold leading-[1.02] text-[#10231c] sm:text-6xl">
-            Build blog posts dynamically, manage your team, and publish straight from MongoDB.
+            Arevei Blogs 
           </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-[#5f6f66]">
+          {/* <p className="mt-6 max-w-2xl text-lg leading-8 text-[#5f6f66]">
             This admin panel stores every blog post in your Atlas database, supports Froala and
             raw HTML editing, and exposes public APIs that keep the frontend blog live and dynamic.
-          </p>
+          </p> */}
         </section>
 
         <AuthPanel needsSetup={needsSetup} />
