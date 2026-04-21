@@ -10,9 +10,9 @@ export async function GET(request: Request) {
 
   return publicJson({
     posts: serializePublicPostCards(posts),
-  });
+  }, undefined, request);
 }
 
-export async function OPTIONS() {
-  return publicOptions();
+export async function OPTIONS(request: Request) {
+  return publicOptions(request);
 }
