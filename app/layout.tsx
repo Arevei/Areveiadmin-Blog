@@ -3,8 +3,6 @@ import { DM_Sans, Space_Grotesk } from "next/font/google";
 
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/constants";
 import "./globals.css";
-import "froala-editor/css/froala_style.min.css";
-import "froala-editor/css/froala_editor.pkgd.min.css";
 
 const bodyFont = DM_Sans({
   variable: "--font-body",

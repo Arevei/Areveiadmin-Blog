@@ -26,7 +26,7 @@ type PostEditorFormProps = {
     thumbnail: string;
     thumbnailAlt: string;
     contentHtml: string;
-    editorMode: "FROALA" | "HTML";
+    editorMode: "DESIGN" | "FROALA" | "HTML";
     author: string;
     authorRole: string;
     status: "DRAFT" | "PUBLISHED";
@@ -46,7 +46,7 @@ type FormValues = {
   coverImageUrl: string;
   coverImageAlt: string;
   contentHtml: string;
-  editorMode: "FROALA" | "HTML";
+  editorMode: "DESIGN" | "HTML";
   authorName: string;
   authorRole: string;
   status: "DRAFT" | "PUBLISHED";
@@ -71,7 +71,7 @@ export function PostEditorForm({ mode, currentUser, initialPost }: PostEditorFor
     coverImageUrl: initialPost?.thumbnail || "",
     coverImageAlt: initialPost?.thumbnailAlt || "",
     contentHtml: initialPost?.contentHtml || "",
-    editorMode: initialPost?.editorMode || "FROALA",
+    editorMode: initialPost?.editorMode === "HTML" ? "HTML" : "DESIGN",
     authorName: initialPost?.author || currentUser.name,
     authorRole: initialPost?.authorRole || currentUser.role,
     status: initialPost?.status || "DRAFT",
@@ -204,7 +204,7 @@ export function PostEditorForm({ mode, currentUser, initialPost }: PostEditorFor
           <div className="mb-6">
             <h2 className="font-display text-2xl font-bold text-[#10231c]">Core content</h2>
             <p className="mt-2 text-sm text-[#647267]">
-              Write the post metadata, switch between Froala and raw HTML, and shape the live
+              Write the post metadata, switch between the design editor and raw HTML, and shape the live
               article body.
             </p>
           </div>
@@ -325,7 +325,7 @@ export function PostEditorForm({ mode, currentUser, initialPost }: PostEditorFor
               <div className="flex items-center justify-between gap-4">
                 <label className="field-label">Editor mode</label>
                 <div className="rounded-full border border-[#14261d]/12 bg-white/70 p-1">
-                  {(["FROALA", "HTML"] as const).map((option) => (
+                  {(["DESIGN", "HTML"] as const).map((option) => (
                     <button
                       key={option}
                       type="button"
@@ -336,20 +336,20 @@ export function PostEditorForm({ mode, currentUser, initialPost }: PostEditorFor
                           : "text-[#647267] hover:text-[#10231c]"
                       }`}
                     >
-                      {option === "FROALA" ? "Froala editor" : "Raw HTML"}
+                      {option === "DESIGN" ? "Design editor" : "Raw HTML"}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {values.editorMode === "FROALA" ? (
+              {values.editorMode === "DESIGN" ? (
                 <div className="space-y-3">
                   <RichTextEditor
                     value={values.contentHtml}
                     onChange={(content) => updateField("contentHtml", content)}
                   />
                   <p className="text-xs text-[#647267]">
-                    Use the image button inside Froala to upload and place images anywhere in the
+                    Use the image button inside the design editor to upload and place images anywhere in the
                     article body.
                   </p>
                 </div>

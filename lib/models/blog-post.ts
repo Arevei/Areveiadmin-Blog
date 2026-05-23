@@ -7,7 +7,7 @@ import {
   type Model,
 } from "mongoose";
 
-import { EDITOR_MODES, POST_STATUSES, type EditorMode, type PostStatus } from "@/lib/constants";
+import { POST_STATUSES, STORED_EDITOR_MODES, type EditorMode, type PostStatus } from "@/lib/constants";
 
 export interface BlogPost {
   title: string;
@@ -98,8 +98,8 @@ const BlogPostSchema = new Schema<BlogPost, BlogPostModelType>(
     },
     editorMode: {
       type: String,
-      enum: EDITOR_MODES,
-      default: "FROALA",
+      enum: STORED_EDITOR_MODES,
+      default: "DESIGN",
     },
     authorName: {
       type: String,
