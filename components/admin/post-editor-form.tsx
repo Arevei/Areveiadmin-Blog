@@ -59,6 +59,7 @@ export function PostEditorForm({ mode, currentUser, initialPost }: PostEditorFor
   const [slugTouched, setSlugTouched] = useState(Boolean(initialPost?.slug));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [values, setValues] = useState<FormValues>({
     title: initialPost?.title || "",
     slug: initialPost?.slug || "",
@@ -198,7 +199,43 @@ export function PostEditorForm({ mode, currentUser, initialPost }: PostEditorFor
   }
 
   return (
-    <form className="grid gap-8 xl:grid-cols-[1.3fr_0.7fr]" onSubmit={handleSubmit}>
+    <form className="space-y-8" onSubmit={handleSubmit}>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.5rem] border border-[#14261d]/10 bg-white/60 p-3 shadow-[0_16px_40px_rgba(20,38,29,0.06)] sm:p-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#647267]">
+            Article preview
+          </p>
+          <p className="mt-1 text-sm text-[#10231c]">
+            {previewOpen ? "Preview is open below." : "Preview is hidden while you edit."}
+          </p>
+        </div>
+        <button
+          type="button"
+          aria-controls="post-live-preview"
+          aria-expanded={previewOpen}
+          onClick={() => setPreviewOpen((current) => !current)}
+          className="inline-flex items-center justify-center rounded-full bg-[#10231c] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0f8b6d]"
+        >
+          {previewOpen ? "Hide preview" : "Show preview"}
+        </button>
+      </div>
+
+      {previewOpen ? (
+        <section id="post-live-preview" className="glass-panel rounded-[2rem] p-6 sm:p-8">
+          <div className="mb-4">
+            <h2 className="font-display text-xl font-bold text-[#10231c]">Live preview</h2>
+            <p className="mt-2 text-sm text-[#647267]">
+              This preview renders your editor HTML. On save, unsafe tags are stripped, but inline
+              styling for custom layouts is preserved.
+            </p>
+          </div>
+
+          <div className="prose-preview max-h-[640px] overflow-y-auto rounded-[1.4rem] bg-white/82 p-5">
+            <div dangerouslySetInnerHTML={previewMarkup} />
+          </div>
+        </section>
+      ) : null}
+
       <div className="space-y-6">
         <section className="glass-panel rounded-[2rem] p-6 sm:p-8">
           <div className="mb-6">
@@ -499,43 +536,27 @@ export function PostEditorForm({ mode, currentUser, initialPost }: PostEditorFor
         </section>
       </div>
 
-      <div className="space-y-6">
-        <section className="glass-panel rounded-[2rem] p-6">
-          <div className="mb-4">
-            <h2 className="font-display text-xl font-bold text-[#10231c]">Live preview</h2>
-            <p className="mt-2 text-sm text-[#647267]">
-              This preview renders your editor HTML. On save, unsafe tags are stripped, but inline
-              styling for custom layouts is preserved.
-            </p>
-          </div>
+      <section className="glass-panel rounded-[2rem] p-6">
+        <h2 className="font-display text-xl font-bold text-[#10231c]">Publishing note</h2>
+        <p className="mt-3 text-sm leading-7 text-[#647267]">
+          Published posts appear immediately on the dynamic frontend after save. Draft posts stay
+          private inside the admin panel.
+        </p>
 
-          <div className="prose-preview max-h-[580px] overflow-y-auto rounded-[1.4rem] bg-white/82 p-5">
-            <div dangerouslySetInnerHTML={previewMarkup} />
-          </div>
-        </section>
+        {error ? <p className="mt-4 text-sm font-semibold text-[#c65d3d]">{error}</p> : null}
 
-        <section className="glass-panel rounded-[2rem] p-6">
-          <h2 className="font-display text-xl font-bold text-[#10231c]">Publishing note</h2>
-          <p className="mt-3 text-sm leading-7 text-[#647267]">
-            Published posts appear immediately on the dynamic frontend after save. Draft posts stay
-            private inside the admin panel.
-          </p>
-
-          {error ? <p className="mt-4 text-sm font-semibold text-[#c65d3d]">{error}</p> : null}
-
-          <button
-            type="submit"
-            disabled={saving}
-            className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#10231c] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0f8b6d] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saving
-              ? "Saving..."
-              : mode === "create"
-                ? "Create post"
-                : "Save changes"}
-          </button>
-        </section>
-      </div>
+        <button
+          type="submit"
+          disabled={saving}
+          className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-[#10231c] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0f8b6d] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+        >
+          {saving
+            ? "Saving..."
+            : mode === "create"
+              ? "Create post"
+              : "Save changes"}
+        </button>
+      </section>
     </form>
   );
 }
