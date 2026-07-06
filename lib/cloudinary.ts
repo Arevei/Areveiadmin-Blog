@@ -51,32 +51,15 @@ export async function uploadImageToCloudinary(
   file: File,
   options?: {
     folder?: string;
-    compression?: "lowest" | "low" | "medium" | "high";
   }
 ): Promise<UploadedImageAsset> {
   const config = getCloudinaryConfig();
   const timestamp = Math.floor(Date.now() / 1000).toString();
   const folder = options?.folder || config.uploadFolder || "";
 
-  // Compression presets for different quality levels
-  const compressionPresets: Record<
-    "lowest" | "low" | "medium" | "high",
-    { quality: string | number; fetchFormat: string; flags?: string }
-  > = {
-    lowest: { quality: 20, fetchFormat: "auto", flags: "lossy" },
-    low: { quality: 30, fetchFormat: "auto", flags: "lossy" },
-    medium: { quality: "auto", fetchFormat: "auto", flags: "lossy" },
-    high: { quality: "auto:good", fetchFormat: "auto" },
-  };
-
-  const compressionLevel = options?.compression || "lowest";
-  const preset = compressionPresets[compressionLevel];
-
   const signatureParams: Record<string, string> = {
     timestamp,
     folder,
-    quality: String(preset.quality),
-    fetch_format: preset.fetchFormat,
   };
 
   const signature = createSignature(signatureParams, config.apiSecret);
@@ -89,13 +72,6 @@ export async function uploadImageToCloudinary(
 
   if (folder) {
     formData.append("folder", folder);
-  }
-
-  // Apply compression settings
-  formData.append("quality", String(preset.quality));
-  formData.append("fetch_format", preset.fetchFormat);
-  if (preset.flags) {
-    formData.append("flags", preset.flags);
   }
 
   const response = await fetch(
