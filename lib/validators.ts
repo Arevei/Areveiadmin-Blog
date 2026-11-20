@@ -30,6 +30,12 @@ export const savePostSchema = z.object({
   excerpt: z.string().trim().min(20, "Excerpt should be at least 20 characters"),
   seoTitle: z.string().trim().optional().default(""),
   seoDescription: z.string().trim().optional().default(""),
+  focusKeyword: z.string().trim().max(120).optional().default(""),
+  noindex: z.boolean().optional().default(false),
+  faqs: z
+    .array(z.object({ question: z.string().trim().min(3), answer: z.string().trim().min(3) }))
+    .max(12)
+    .default([]),
   category: z.string().trim().min(2, "Category is required"),
   tags: z.array(z.string().trim().min(1)).default([]),
   keyTakeaways: z.array(z.string().trim().min(1)).default([]),
@@ -41,4 +47,41 @@ export const savePostSchema = z.object({
   authorRole: z.string().trim().min(2, "Author role is required"),
   status: z.enum(POST_STATUSES),
   publishedAt: z.string().trim().nullable().optional(),
+});
+
+export const siteSettingsSchema = z.object({
+  aboutTitle: z.string().trim().max(80),
+  aboutText: z.string().trim().max(600),
+  aboutImageUrl: z.string().trim().max(500),
+  aboutCtaLabel: z.string().trim().max(40),
+  aboutCtaUrl: z.string().trim().max(500),
+  promoEnabled: z.boolean(),
+  promoLabel: z.string().trim().max(40),
+  promoTitle: z.string().trim().max(120),
+  promoText: z.string().trim().max(300),
+  promoImageUrl: z.string().trim().max(500),
+  promoCtaLabel: z.string().trim().max(40),
+  promoLinkUrl: z.string().trim().max(500),
+  adsenseEnabled: z.boolean(),
+  adsenseClient: z.string().trim().regex(/^(ca-pub-d{10,20})?$/, "AdSense client looks like ca-pub-1234567890123456"),
+  adsenseSlot: z.string().trim().regex(/^d{0,20}$/, "AdSense slot is the numeric ad unit id"),
+});
+
+export const generatePostSchema = z.object({
+  topic: z.string().trim().min(8, "Describe the topic in a few words").max(300),
+  primaryKeyword: z.string().trim().max(120).optional().default(""),
+  secondaryKeywords: z.string().trim().max(400).optional().default(""),
+  audience: z.string().trim().max(200).optional().default(""),
+  tone: z.string().trim().max(60).optional().default("Practical and direct"),
+  length: z.enum(["short", "standard", "long"]).default("standard"),
+  notes: z.string().trim().max(4000).optional().default(""),
+  category: z.string().trim().max(80).optional().default(""),
+});
+
+export const assistSchema = z.object({
+  action: z.enum(["seo", "rewrite", "shorten", "expand"]),
+  title: z.string().max(300).optional().default(""),
+  focusKeyword: z.string().max(120).optional().default(""),
+  contentHtml: z.string().max(400000).optional().default(""),
+  selection: z.string().max(20000).optional().default(""),
 });

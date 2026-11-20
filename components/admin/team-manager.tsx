@@ -57,9 +57,9 @@ export function TeamManager({ users }: TeamManagerProps) {
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-      <section className="glass-panel rounded-[2rem] p-6 sm:p-8">
-        <h2 className="font-display text-2xl font-bold text-[#10231c]">Invite a teammate</h2>
-        <p className="mt-2 text-sm text-[#647267]">
+      <section className="glass-panel rounded-xl p-6 sm:p-8">
+        <h2 className="font-display text-2xl font-bold text-foreground">Invite a teammate</h2>
+        <p className="mt-2 text-sm text-muted">
           Create separate accounts for admins, editors, or authors so different users can manage
           the blog safely.
         </p>
@@ -131,17 +131,17 @@ export function TeamManager({ users }: TeamManagerProps) {
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex w-full items-center justify-center rounded-full bg-[#10231c] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0f8b6d] disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#69f6df] disabled:opacity-60"
           >
             {submitting ? "Creating..." : "Create user"}
           </button>
         </form>
       </section>
 
-      <section className="glass-panel rounded-[2rem] p-6 sm:p-8">
+      <section className="glass-panel rounded-xl p-6 sm:p-8">
         <div className="mb-5">
-          <h2 className="font-display text-2xl font-bold text-[#10231c]">Current team</h2>
-          <p className="mt-2 text-sm text-[#647267]">
+          <h2 className="font-display text-2xl font-bold text-foreground">Current team</h2>
+          <p className="mt-2 text-sm text-muted">
             Admins can create users, editors can manage all posts, and authors can work on their
             own posts.
           </p>
@@ -151,18 +151,18 @@ export function TeamManager({ users }: TeamManagerProps) {
           {users.map((user) => (
             <div
               key={user.id}
-              className="rounded-[1.4rem] border border-[#14261d]/10 bg-white/78 p-4"
+              className="rounded-xl border border-line bg-white/[0.04] p-4"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-[#10231c]">{user.name}</p>
-                  <p className="text-sm text-[#647267]">{user.email}</p>
+                  <p className="font-semibold text-foreground">{user.name}</p>
+                  <p className="text-sm text-muted">{user.email}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-[#10231c]/8 px-3 py-1 text-xs font-semibold text-[#10231c]">
+                  <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-foreground">
                     {user.role}
                   </span>
-                  <span className="rounded-full bg-[#0f8b6d]/10 px-3 py-1 text-xs font-semibold text-[#0f8b6d]">
+                  <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
                     {user.active ? "Active" : "Inactive"}
                   </span>
                 </div>

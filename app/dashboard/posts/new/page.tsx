@@ -1,26 +1,27 @@
-import { PostEditorForm } from "@/components/admin/post-editor-form";
+import { PostEditor } from "@/components/editor/post-editor-loader";
 import { requireSession } from "@/lib/auth/session";
+import { getPostCategories } from "@/lib/services/posts";
+import { getSiteSettings } from "@/lib/services/settings";
+import { getSiteUrl } from "@/lib/site";
 
-export default async function NewPostPage() {
+type PageProps = {
+  searchParams: Promise<{ ai?: string }>;
+};
+
+export default async function NewPostPage({ searchParams }: PageProps) {
   const session = await requireSession();
+  const [{ ai }, site, categories] = await Promise.all([searchParams, getSiteSettings(), getPostCategories()]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#647267]">
-          New post
-        </p>
-        <h1 className="mt-3 font-display text-4xl font-bold text-[#10231c]">
-          Create a dynamic blog article
-        </h1>
-      </div>
-
-      <PostEditorForm
+    <div>
+      <h1 className="mb-4 font-display text-2xl font-bold tracking-tight">New post</h1>
+      <PostEditor
         mode="create"
-        currentUser={{
-          name: session.name,
-          role: session.role,
-        }}
+        currentUser={{ name: session.name, role: session.role }}
+        siteUrl={getSiteUrl()}
+        site={site}
+        categories={categories}
+        startWithAi={ai === "1"}
       />
     </div>
   );

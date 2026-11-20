@@ -52,3 +52,8 @@ export function publicJson(data: unknown, init?: ResponseInit, request?: Request
 export function publicOptions(request?: Request) {
   return withPublicCors(new NextResponse(null, { status: 204 }), request);
 }
+
+/** Published content is served from the CDN for a minute and refreshed in the background. */
+export const PUBLIC_CACHE_HEADERS = {
+  "Cache-Control": "public, s-maxage=60, stale-while-revalidate=600",
+};

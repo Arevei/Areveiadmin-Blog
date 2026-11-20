@@ -1,56 +1,22 @@
-import sanitizeHtml from "sanitize-html";
-
+import { normalizeArticleHtml, type FaqItem } from "@/lib/content/normalize";
 import type { BlogPost, BlogPostDocument } from "@/lib/models/blog-post";
 import { formatDate } from "@/lib/utils";
 
-const allowedTags = [
-  ...sanitizeHtml.defaults.allowedTags,
-  "img",
-  "figure",
-  "figcaption",
-  "iframe",
-  "section",
-  "article",
-  "video",
-  "source",
-  "span",
-  "h1",
-  "h2",
-  "h3",
-  "h4",
-];
+/**
+ * Runs content through the shared article pipeline and derives everything that
+ * depends on it. Used on save, on read (so legacy posts are cleaned without a
+ * migration) and by the live preview, which is why the three always agree.
+ */
+export function prepareArticle(contentHtml: string, title: string, manualFaqs: FaqItem[] = []) {
+  const article = normalizeArticleHtml(contentHtml, { title });
 
-const allowedAttributes = {
-  ...sanitizeHtml.defaults.allowedAttributes,
-  "*": ["class", "id", "style"],
-  a: ["href", "name", "target", "rel"],
-  img: ["src", "alt", "title", "width", "height", "loading", "style"],
-  iframe: [
-    "src",
-    "width",
-    "height",
-    "allow",
-    "allowfullscreen",
-    "frameborder",
-    "title",
-  ],
-  source: ["src", "type"],
-};
-
-export function sanitizeBlogHtml(html: string) {
-  return sanitizeHtml(html, {
-    allowedTags,
-    allowedAttributes,
-    allowedSchemes: ["http", "https", "mailto", "tel", "data"],
-    allowedSchemesByTag: {
-      img: ["http", "https", "data"],
-      iframe: ["http", "https"],
-    },
-    // The admin supports a raw HTML mode for trusted internal authors.
-    // Keep inline styles intact so custom-designed blog layouts render
-    // the same after save while still stripping unsafe tags/attributes.
-    parseStyleAttributes: false,
-  });
+  return {
+    contentHtml: article.html,
+    toc: article.toc,
+    faqs: manualFaqs.length > 0 ? manualFaqs : article.faqs,
+    wordCount: article.wordCount,
+    readTimeText: `${article.readTimeMinutes} min read`,
+  };
 }
 
 export function stripHtml(html: string) {
@@ -64,7 +30,7 @@ export function stripHtml(html: string) {
 
 export function calculateReadTime(html: string) {
   const words = stripHtml(html).split(/\s+/).filter(Boolean).length;
-  const minutes = Math.max(1, Math.ceil(words / 200));
+  const minutes = Math.max(1, Math.round(words / 220));
   return `${minutes} min read`;
 }
 
@@ -95,7 +61,8 @@ type BlogPostSummarySource = BlogPostBaseSource & BlogPostIdentity;
 type BlogPostDetailSource = BlogPostSummarySource &
   Pick<
     BlogPost,
-    "contentHtml" | "keyTakeaways" | "editorMode" | "authorRole" | "seoTitle" | "seoDescription" | "status"
+    | "contentHtml" | "keyTakeaways" | "editorMode" | "authorRole" | "seoTitle" | "seoDescription" | "status"
+    | "focusKeyword" | "noindex" | "faqs"
   >;
 
 function toStringId(value?: { toString(): string } | string) {
@@ -137,12 +104,23 @@ export function serializePostCard(post: BlogPostSummarySource) {
 
 export function serializePost(post: BlogPostDetailSource | BlogPostDocument) {
   const publishedAt = resolvePublishedAt(post);
+  const article = prepareArticle(
+    post.contentHtml,
+    post.title,
+    (post.faqs || []).map((faq) => ({ question: faq.question, answer: faq.answer })),
+  );
 
   return {
     ...serializePostCard(post),
+    readTime: article.readTimeText,
+    contentHtml: article.contentHtml,
+    toc: article.toc,
+    faqs: article.faqs,
+    wordCount: article.wordCount,
+    focusKeyword: post.focusKeyword || "",
+    noindex: Boolean(post.noindex),
     seoTitle: post.seoTitle || "",
     seoDescription: post.seoDescription || "",
-    contentHtml: post.contentHtml,
     authorRole: post.authorRole,
     keyTakeaways: post.keyTakeaways,
     status: post.status,

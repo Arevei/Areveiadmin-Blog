@@ -122,6 +122,36 @@ export async function getPublicPosts(category?: string) {
   return resolveMissingReadTimes(posts);
 }
 
+/**
+ * One window of the published list for the blog index, with the totals the
+ * pager and the category filter need. Only card fields are read, and only for
+ * the rows in the window.
+ */
+export async function getPublicPostWindow(options: { category?: string; offset: number; limit: number }) {
+  await connectToDatabase();
+
+  const published = { status: "PUBLISHED" };
+  const filter = options.category ? { ...published, category: options.category } : published;
+
+  const [posts, total, totalAll, categories] = await Promise.all([
+    BlogPostModel.find(filter, publicPostCardProjection)
+      .sort({ publishedAt: -1, updatedAt: -1, _id: -1 })
+      .skip(options.offset)
+      .limit(options.limit)
+      .lean(),
+    BlogPostModel.countDocuments(filter),
+    options.category ? BlogPostModel.countDocuments(published) : Promise.resolve(-1),
+    BlogPostModel.distinct("category", published) as Promise<string[]>,
+  ]);
+
+  return {
+    posts: await resolveMissingReadTimes(posts),
+    total,
+    totalAll: totalAll === -1 ? total : totalAll,
+    categories: categories.filter(Boolean).sort((a, b) => a.localeCompare(b)),
+  };
+}
+
 export async function getPublicPostBySlug(slug: string) {
   await connectToDatabase();
   return BlogPostModel.findOne({
@@ -157,4 +187,10 @@ export async function getRelatedPosts(slug: string, category: string, tags: stri
 
 export function serializePublicPostCards(posts: PublicPostCardRecord[]) {
   return normalizeProjectedCards(posts);
+}
+
+export async function getPostCategories() {
+  await connectToDatabase();
+  const categories = (await BlogPostModel.distinct("category")) as string[];
+  return categories.filter(Boolean).sort((a, b) => a.localeCompare(b));
 }

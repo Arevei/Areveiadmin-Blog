@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
 
-import { PostEditorForm } from "@/components/admin/post-editor-form";
+import { PostEditor } from "@/components/editor/post-editor-loader";
 import { requireSession } from "@/lib/auth/session";
 import { serializePost } from "@/lib/blog";
-import { getAccessiblePostById } from "@/lib/services/posts";
+import { getAccessiblePostById, getPostCategories } from "@/lib/services/posts";
+import { getSiteSettings } from "@/lib/services/settings";
+import { getSiteUrl } from "@/lib/site";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -12,31 +14,26 @@ type PageProps = {
 export default async function EditPostPage({ params }: PageProps) {
   const session = await requireSession();
   const { id } = await params;
-  const post = await getAccessiblePostById(id, session);
+  const [post, site, categories] = await Promise.all([
+    getAccessiblePostById(id, session),
+    getSiteSettings(),
+    getPostCategories(),
+  ]);
 
-  if (!post) {
-    notFound();
-  }
+  if (!post) notFound();
 
   const serialized = serializePost(post);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#647267]">
-          Edit post
-        </p>
-        <h1 className="mt-3 font-display text-4xl font-bold text-[#10231c]">
-          {serialized.title}
-        </h1>
-      </div>
-
-      <PostEditorForm
+    <div>
+      <h1 className="mb-4 font-display text-2xl font-bold tracking-tight">Edit post</h1>
+      <PostEditor
+        key={serialized.id}
         mode="edit"
-        currentUser={{
-          name: session.name,
-          role: session.role,
-        }}
+        currentUser={{ name: session.name, role: session.role }}
+        siteUrl={getSiteUrl()}
+        site={site}
+        categories={categories}
         initialPost={{
           id: serialized.id,
           title: serialized.title,
@@ -44,17 +41,21 @@ export default async function EditPostPage({ params }: PageProps) {
           excerpt: serialized.excerpt,
           seoTitle: serialized.seoTitle,
           seoDescription: serialized.seoDescription,
+          focusKeyword: serialized.focusKeyword,
+          noindex: serialized.noindex,
+          // Only questions an editor typed in; ones found in the article are re-derived on every render.
+          faqs: (post.faqs || []).map((faq) => ({ question: faq.question, answer: faq.answer })),
           category: serialized.category,
           tags: serialized.tags,
           keyTakeaways: serialized.keyTakeaways,
           thumbnail: serialized.thumbnail,
-          thumbnailAlt: serialized.thumbnailAlt,
+          thumbnailAlt: post.coverImageAlt || "",
           contentHtml: serialized.contentHtml,
           editorMode: serialized.editorMode,
           author: serialized.author,
           authorRole: serialized.authorRole,
           status: serialized.status,
-          publishedAt: serialized.publishedAt,
+          publishedAt: post.publishedAt ? post.publishedAt.toISOString() : "",
         }}
       />
     </div>

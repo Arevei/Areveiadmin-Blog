@@ -1,12 +1,12 @@
-import { Types } from "mongoose";
 import { NextResponse } from "next/server";
 
 import { getSession } from "@/lib/auth/session";
-import { calculateReadTime, sanitizeBlogHtml, serializePost } from "@/lib/blog";
+import { serializePost } from "@/lib/blog";
 import { jsonError } from "@/lib/api";
 import { connectToDatabase } from "@/lib/db";
 import { BlogPostModel } from "@/lib/models/blog-post";
 import { getAccessiblePosts } from "@/lib/services/posts";
+import { writePost } from "@/lib/services/save-post";
 import { savePostSchema } from "@/lib/validators";
 import { slugify } from "@/lib/utils";
 
@@ -49,25 +49,7 @@ export async function POST(request: Request) {
     return jsonError("A post with that slug already exists.", 409);
   }
 
-  const createdBy = new Types.ObjectId(session.userId);
-
-  const sanitizedHtml = sanitizeBlogHtml(parsed.data.contentHtml);
-
-  const post = await BlogPostModel.create({
-    ...parsed.data,
-    tags: Array.from(new Set(parsed.data.tags)),
-    keyTakeaways: Array.from(new Set(parsed.data.keyTakeaways)),
-    contentHtml: sanitizedHtml,
-    readTimeText: calculateReadTime(sanitizedHtml),
-    publishedAt:
-      parsed.data.status === "PUBLISHED"
-        ? parsed.data.publishedAt
-          ? new Date(parsed.data.publishedAt)
-          : new Date()
-        : null,
-    createdBy,
-    updatedBy: createdBy,
-  });
+  const post = await writePost(parsed.data, session);
 
   return NextResponse.json({ post: serializePost(post) }, { status: 201 });
 }

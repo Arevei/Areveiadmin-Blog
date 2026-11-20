@@ -15,6 +15,10 @@ export interface BlogPost {
   excerpt: string;
   seoTitle?: string;
   seoDescription?: string;
+  focusKeyword?: string;
+  noindex?: boolean;
+  faqs: { question: string; answer: string }[];
+  wordCount?: number;
   category: string;
   tags: string[];
   keyTakeaways: string[];
@@ -64,6 +68,13 @@ const BlogPostSchema = new Schema<BlogPost, BlogPostModelType>(
       trim: true,
       default: "",
     },
+    focusKeyword: { type: String, trim: true, default: "" },
+    noindex: { type: Boolean, default: false },
+    faqs: {
+      type: [{ _id: false, question: { type: String, trim: true }, answer: { type: String, trim: true } }],
+      default: [],
+    },
+    wordCount: { type: Number, default: 0 },
     category: {
       type: String,
       required: true,
@@ -136,7 +147,6 @@ const BlogPostSchema = new Schema<BlogPost, BlogPostModelType>(
   },
 );
 
-BlogPostSchema.index({ slug: 1 }, { unique: true });
 BlogPostSchema.index({ status: 1, publishedAt: -1 });
 BlogPostSchema.index({ category: 1, status: 1 });
 

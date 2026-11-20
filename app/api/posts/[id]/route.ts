@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { Types } from "mongoose";
 
 import { canDeletePost, canEditPost } from "@/lib/auth/permissions";
 import { getSession } from "@/lib/auth/session";
-import { calculateReadTime, sanitizeBlogHtml, serializePost } from "@/lib/blog";
+import { serializePost } from "@/lib/blog";
 import { jsonError } from "@/lib/api";
 import { connectToDatabase } from "@/lib/db";
 import { BlogPostModel } from "@/lib/models/blog-post";
+import { writePost } from "@/lib/services/save-post";
+import { triggerSiteRebuild } from "@/lib/deploy";
 import { savePostSchema } from "@/lib/validators";
 import { slugify } from "@/lib/utils";
 
@@ -76,35 +77,9 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     return jsonError("A post with that slug already exists.", 409);
   }
 
-  post.title = parsed.data.title;
-  post.slug = parsed.data.slug;
-  post.excerpt = parsed.data.excerpt;
-  post.seoTitle = parsed.data.seoTitle;
-  post.seoDescription = parsed.data.seoDescription;
-  post.category = parsed.data.category;
-  post.tags = Array.from(new Set(parsed.data.tags));
-  post.keyTakeaways = Array.from(new Set(parsed.data.keyTakeaways));
-  post.coverImageUrl = parsed.data.coverImageUrl;
-  post.coverImageAlt = parsed.data.coverImageAlt;
-  const sanitizedHtml = sanitizeBlogHtml(parsed.data.contentHtml);
+  const saved = await writePost(parsed.data, session, post);
 
-  post.contentHtml = sanitizedHtml;
-  post.readTimeText = calculateReadTime(sanitizedHtml);
-  post.editorMode = parsed.data.editorMode;
-  post.authorName = parsed.data.authorName;
-  post.authorRole = parsed.data.authorRole;
-  post.status = parsed.data.status;
-  post.updatedBy = new Types.ObjectId(session.userId);
-  post.publishedAt =
-    parsed.data.status === "PUBLISHED"
-      ? parsed.data.publishedAt
-        ? new Date(parsed.data.publishedAt)
-        : post.publishedAt || new Date()
-      : null;
-
-  await post.save();
-
-  return NextResponse.json({ post: serializePost(post) });
+  return NextResponse.json({ post: serializePost(saved) });
 }
 
 export async function DELETE(_: Request, { params }: RouteContext) {
@@ -128,7 +103,9 @@ export async function DELETE(_: Request, { params }: RouteContext) {
     return jsonError("You do not have access to delete this post.", 403);
   }
 
+  const wasPublished = post.status === "PUBLISHED";
   await post.deleteOne();
+  if (wasPublished) triggerSiteRebuild();
 
   return NextResponse.json({ ok: true });
 }

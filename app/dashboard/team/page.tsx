@@ -17,10 +17,10 @@ export default async function TeamPage() {
   return (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#647267]">
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-muted">
           Team
         </p>
-        <h1 className="mt-3 font-display text-4xl font-bold text-[#10231c]">
+        <h1 className="mt-3 font-display text-4xl font-bold text-foreground">
           Manage blog users
         </h1>
       </div>

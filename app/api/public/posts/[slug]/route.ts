@@ -1,6 +1,7 @@
-import { publicJson, publicOptions } from "@/lib/api";
+import { PUBLIC_CACHE_HEADERS, publicJson, publicOptions } from "@/lib/api";
 import { getRelatedPosts, getPublicPostBySlug, serializePublicPostCards } from "@/lib/services/posts";
 import { serializePost } from "@/lib/blog";
+import { getSiteSettings } from "@/lib/services/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -17,12 +18,16 @@ export async function GET(request: Request, { params }: RouteContext) {
     return publicJson({ error: "Post not found." }, { status: 404 }, request);
   }
 
-  const relatedPosts = await getRelatedPosts(post.slug, post.category, post.tags, 3);
+  const [relatedPosts, site] = await Promise.all([
+    getRelatedPosts(post.slug, post.category, post.tags, 3),
+    getSiteSettings(),
+  ]);
 
   return publicJson({
     post: serializePost(post),
     relatedPosts: serializePublicPostCards(relatedPosts),
-  }, undefined, request);
+    site,
+  }, { headers: PUBLIC_CACHE_HEADERS }, request);
 }
 
 export async function OPTIONS(request: Request) {

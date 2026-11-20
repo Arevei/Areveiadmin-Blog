@@ -85,7 +85,7 @@ export function CloudinaryUploadButton({
         onClick={() => inputRef.current?.click()}
         className={
           className ||
-          "inline-flex items-center justify-center gap-2 rounded-full border border-[#14261d]/12 bg-white/78 px-4 py-2 text-sm font-semibold text-[#10231c] transition hover:border-[#0f8b6d]/35 hover:text-[#0f8b6d] disabled:cursor-not-allowed disabled:opacity-60"
+          "inline-flex items-center justify-center gap-2 rounded-full border border-line bg-white/[0.04] px-4 py-2 text-sm font-semibold text-foreground transition hover:border-accent/50 hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
         }
       >
         <ImagePlus className="h-4 w-4" />

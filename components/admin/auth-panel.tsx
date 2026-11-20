@@ -60,15 +60,15 @@ export function AuthPanel({ needsSetup }: AuthPanelProps) {
   }
 
   return (
-    <div className="glass-panel w-full max-w-xl rounded-[2rem] p-8 sm:p-10">
+    <div className="glass-panel w-full max-w-xl rounded-xl p-8 sm:p-10">
       <div className="mb-8">
-        <span className="inline-flex rounded-full border border-[#0f8b6d]/20 bg-[#0f8b6d]/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#0f8b6d]">
+        <span className="inline-flex rounded-full border border-accent/50 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-accent">
           {needsSetup ? "Initial setup" : "Secure sign in"}
         </span>
-        <h1 className="mt-5 font-display text-4xl font-bold leading-tight text-[#10231c]">
+        <h1 className="mt-5 font-display text-4xl font-bold leading-tight text-foreground">
           {needsSetup ? "Create the owner account" : "Welcome back to Arevei Admin"}
         </h1>
-        <p className="mt-3 max-w-lg text-base text-[#5f6f66]">
+        <p className="mt-3 max-w-lg text-base text-muted">
           {needsSetup
             ? "This is the first login for the blog system. Create the owner account, then invite editors and authors from the team page."
             : "Sign in to manage blog posts, publish updates, and collaborate with your content team."}
@@ -133,7 +133,7 @@ export function AuthPanel({ needsSetup }: AuthPanelProps) {
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex w-full items-center justify-center rounded-full bg-[#10231c] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0f8b6d] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex w-full items-center justify-center rounded-full bg-accent px-5 py-3 text-sm font-semibold text-ink transition hover:bg-[#69f6df] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting
             ? "Please wait..."
