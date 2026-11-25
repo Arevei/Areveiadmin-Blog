@@ -46,7 +46,19 @@ export async function POST(request: Request) {
   if (!isAiConfigured()) return jsonError(AI_NOT_CONFIGURED, 503);
 
   const parsed = generatePostSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return jsonError(parsed.error.issues[0]?.message || "Invalid brief");
+  if (!parsed.success) {
+    // One message per field, so the form can mark every field that failed.
+    const fields: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const key = String(issue.path[0] ?? "");
+      if (key && !fields[key]) fields[key] = issue.message;
+    }
+    const messages = Object.values(fields);
+    return Response.json(
+      { error: messages.length ? messages.join(" ") : "The brief is not valid.", fields },
+      { status: 400 },
+    );
+  }
 
   await connectToDatabase();
   const published = await BlogPostModel.find({ status: "PUBLISHED" }, { title: 1, slug: 1, category: 1 })

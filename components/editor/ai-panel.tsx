@@ -3,6 +3,8 @@
 import { Sparkles, Square } from "lucide-react";
 import { useRef, useState } from "react";
 
+import { BRIEF_LABELS, BRIEF_LIMITS, BRIEF_TOPIC_MIN, tooLongMessage, type BriefField } from "@/lib/ai/brief-limits";
+
 export type GeneratedPost = {
   title: string;
   slug: string;
@@ -36,6 +38,54 @@ type StreamEvent =
   | { type: "done"; post: GeneratedPost; truncated?: boolean }
   | { type: "error"; message: string };
 
+const BRIEF_FIELDS = Object.keys(BRIEF_LIMITS) as BriefField[];
+
+type TextFieldProps = {
+  field: BriefField;
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  placeholder?: string;
+  multiline?: boolean;
+  inputClassName?: string;
+};
+
+/** A brief field with a live character counter and an inline error under the field that failed. */
+function TextField({ field, id, value, onChange, error, placeholder, multiline, inputClassName = "" }: TextFieldProps) {
+  const max = BRIEF_LIMITS[field];
+  const length = value.trim().length;
+  const invalid = Boolean(error);
+  const className = `field-input ${inputClassName} ${invalid ? "border-danger!" : ""}`;
+  const shared = {
+    id,
+    className,
+    value,
+    placeholder,
+    "aria-invalid": invalid,
+    "aria-describedby": `${id}-count${invalid ? ` ${id}-error` : ""}`,
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <label className="field-label" htmlFor={id}>{BRIEF_LABELS[field]}</label>
+        <span id={`${id}-count`} className={`text-[11px] tabular-nums ${length > max ? "font-semibold text-danger" : "text-muted"}`}>
+          {length.toLocaleString("en-US")} / {max.toLocaleString("en-US")}
+        </span>
+      </div>
+      {multiline ? (
+        <textarea {...shared} onChange={(event) => onChange(event.target.value)} />
+      ) : (
+        <input {...shared} onChange={(event) => onChange(event.target.value)} />
+      )}
+      {invalid ? (
+        <p id={`${id}-error`} className="text-xs leading-relaxed text-danger" role="alert">{error}</p>
+      ) : null}
+    </div>
+  );
+}
+
 /** Brief form + streaming progress for drafting a whole article with Claude. */
 export function AiPanel({ hasContent, defaultKeyword, onGenerated }: AiPanelProps) {
   const abortRef = useRef<AbortController | null>(null);
@@ -52,10 +102,25 @@ export function AiPanel({ hasContent, defaultKeyword, onGenerated }: AiPanelProp
   const [progress, setProgress] = useState({ words: 0, tail: "" });
   const [message, setMessage] = useState<{ tone: "error" | "ok"; text: string } | null>(null);
 
-  const set = <K extends keyof typeof brief>(key: K, value: (typeof brief)[K]) =>
+  const [serverErrors, setServerErrors] = useState<Partial<Record<BriefField, string>>>({});
+
+  const set = <K extends keyof typeof brief>(key: K, value: (typeof brief)[K]) => {
     setBrief((current) => ({ ...current, [key]: value }));
+    setServerErrors((current) => (key in current ? { ...current, [key]: undefined } : current));
+  };
+
+  // Live checks: a field over its limit is flagged as you type, before anything is sent.
+  const errors: Partial<Record<BriefField, string>> = {};
+  for (const field of BRIEF_FIELDS) {
+    const length = brief[field].trim().length;
+    if (length > BRIEF_LIMITS[field]) errors[field] = tooLongMessage(field, length);
+    else if (serverErrors[field]) errors[field] = serverErrors[field];
+  }
+  const invalidFields = BRIEF_FIELDS.filter((field) => errors[field]);
+  const topicTooShort = brief.topic.trim().length < BRIEF_TOPIC_MIN;
 
   async function generate() {
+    if (invalidFields.length) return;
     if (hasContent && !window.confirm("Replace the current article and its SEO fields with a new AI draft?")) return;
 
     const controller = new AbortController();
@@ -76,7 +141,12 @@ export function AiPanel({ hasContent, defaultKeyword, onGenerated }: AiPanelProp
       });
 
       if (!response.ok || !response.body) {
-        const data = (await response.json().catch(() => ({}))) as { error?: string };
+        const data = (await response.json().catch(() => ({}))) as { error?: string; fields?: Partial<Record<BriefField, string>> };
+        const failed = BRIEF_FIELDS.filter((field) => data.fields?.[field]);
+        if (failed.length) {
+          setServerErrors(data.fields || {});
+          throw new Error(`Fix the marked ${failed.length === 1 ? "field" : "fields"}: ${failed.map((field) => BRIEF_LABELS[field]).join(", ")}.`);
+        }
         throw new Error(data.error || "Could not start the AI draft.");
       }
 
@@ -136,32 +206,47 @@ export function AiPanel({ hasContent, defaultKeyword, onGenerated }: AiPanelProp
         </p>
       </div>
 
-      <div className="space-y-1.5">
-        <label className="field-label" htmlFor="ai-topic">Topic</label>
-        <textarea
-          id="ai-topic"
-          className="field-input min-h-20"
-          value={brief.topic}
-          onChange={(event) => set("topic", event.target.value)}
-          placeholder="How small clinics can cut no-shows with WhatsApp reminders"
-        />
-      </div>
+      <TextField
+        field="topic"
+        id="ai-topic"
+        multiline
+        inputClassName="min-h-20"
+        value={brief.topic}
+        onChange={(value) => set("topic", value)}
+        error={errors.topic}
+        placeholder="How small clinics can cut no-shows with WhatsApp reminders"
+      />
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <label className="field-label" htmlFor="ai-keyword">Primary keyword</label>
-          <input id="ai-keyword" className="field-input" value={brief.primaryKeyword} onChange={(event) => set("primaryKeyword", event.target.value)} placeholder="reduce patient no-shows" />
-        </div>
-        <div className="space-y-1.5">
-          <label className="field-label" htmlFor="ai-audience">Audience</label>
-          <input id="ai-audience" className="field-input" value={brief.audience} onChange={(event) => set("audience", event.target.value)} placeholder="Clinic owners in India" />
-        </div>
-      </div>
+      <TextField
+        field="primaryKeyword"
+        id="ai-keyword"
+        value={brief.primaryKeyword}
+        onChange={(value) => set("primaryKeyword", value)}
+        error={errors.primaryKeyword}
+        placeholder="reduce patient no-shows"
+      />
 
-      <div className="space-y-1.5">
-        <label className="field-label" htmlFor="ai-secondary">Secondary keywords</label>
-        <input id="ai-secondary" className="field-input" value={brief.secondaryKeywords} onChange={(event) => set("secondaryKeywords", event.target.value)} placeholder="appointment reminders, whatsapp automation" />
-      </div>
+      <TextField
+        field="audience"
+        id="ai-audience"
+        multiline
+        inputClassName="min-h-16"
+        value={brief.audience}
+        onChange={(value) => set("audience", value)}
+        error={errors.audience}
+        placeholder="Clinic owners in India"
+      />
+
+      <TextField
+        field="secondaryKeywords"
+        id="ai-secondary"
+        multiline
+        inputClassName="min-h-16"
+        value={brief.secondaryKeywords}
+        onChange={(value) => set("secondaryKeywords", value)}
+        error={errors.secondaryKeywords}
+        placeholder="appointment reminders, whatsapp automation"
+      />
 
       <fieldset>
         <legend className="field-label mb-1.5">Length</legend>
@@ -181,21 +266,26 @@ export function AiPanel({ hasContent, defaultKeyword, onGenerated }: AiPanelProp
         </div>
       </fieldset>
 
-      <div className="space-y-1.5">
-        <label className="field-label" htmlFor="ai-tone">Tone</label>
-        <input id="ai-tone" className="field-input" value={brief.tone} onChange={(event) => set("tone", event.target.value)} />
-      </div>
+      <TextField
+        field="tone"
+        id="ai-tone"
+        multiline
+        inputClassName="min-h-16"
+        value={brief.tone}
+        onChange={(value) => set("tone", value)}
+        error={errors.tone}
+      />
 
-      <div className="space-y-1.5">
-        <label className="field-label" htmlFor="ai-notes">Facts, sources and angles to use</label>
-        <textarea
-          id="ai-notes"
-          className="field-input min-h-24"
-          value={brief.notes}
-          onChange={(event) => set("notes", event.target.value)}
-          placeholder="Paste real numbers, client examples, links or an outline. The AI will not invent statistics, so anything specific must come from here."
-        />
-      </div>
+      <TextField
+        field="notes"
+        id="ai-notes"
+        multiline
+        inputClassName="min-h-24"
+        value={brief.notes}
+        onChange={(value) => set("notes", value)}
+        error={errors.notes}
+        placeholder="Paste real numbers, client examples, links or an outline. The AI will not invent statistics, so anything specific must come from here."
+      />
 
       {running ? (
         <div className="rounded-lg border border-accent/30 bg-accent/5 p-3" aria-live="polite">
@@ -211,11 +301,17 @@ export function AiPanel({ hasContent, defaultKeyword, onGenerated }: AiPanelProp
           {progress.tail ? <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-muted">…{progress.tail}</p> : null}
         </div>
       ) : (
-        <button type="button" className="btn btn-primary w-full" disabled={brief.topic.trim().length < 8} onClick={generate}>
+        <button type="button" className="btn btn-primary w-full" disabled={topicTooShort || invalidFields.length > 0} onClick={generate}>
           <Sparkles className="h-4 w-4" aria-hidden="true" />
           Generate draft
         </button>
       )}
+
+      {!running && invalidFields.length > 0 ? (
+        <p className="text-sm leading-relaxed text-danger" role="status">
+          Shorten the marked {invalidFields.length === 1 ? "field" : "fields"} to generate: {invalidFields.map((field) => BRIEF_LABELS[field]).join(", ")}.
+        </p>
+      ) : null}
 
       {message ? (
         <p className={`text-sm leading-relaxed ${message.tone === "error" ? "text-danger" : "text-accent"}`} role="status">

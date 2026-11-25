@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { BRIEF_LIMITS, BRIEF_TOPIC_MIN, tooLongMessage, type BriefField } from "@/lib/ai/brief-limits";
 import { EDITOR_MODES, POST_STATUSES, USER_ROLES } from "@/lib/constants";
 
 export const bootstrapOwnerSchema = z.object({
@@ -67,14 +68,27 @@ export const siteSettingsSchema = z.object({
   adsenseSlot: z.string().trim().regex(/^d{0,20}$/, "AdSense slot is the numeric ad unit id"),
 });
 
+const briefText = (field: BriefField) =>
+  z
+    .string()
+    .trim()
+    .superRefine((value, ctx) => {
+      if (value.length > BRIEF_LIMITS[field]) {
+        ctx.addIssue({ code: "custom", message: tooLongMessage(field, value.length) });
+      }
+    });
+
 export const generatePostSchema = z.object({
-  topic: z.string().trim().min(8, "Describe the topic in a few words").max(300),
-  primaryKeyword: z.string().trim().max(120).optional().default(""),
-  secondaryKeywords: z.string().trim().max(400).optional().default(""),
-  audience: z.string().trim().max(200).optional().default(""),
-  tone: z.string().trim().max(60).optional().default("Practical and direct"),
+  topic: briefText("topic").refine(
+    (value) => value.length >= BRIEF_TOPIC_MIN,
+    "Topic is too short: describe it in a few words.",
+  ),
+  primaryKeyword: briefText("primaryKeyword").optional().default(""),
+  secondaryKeywords: briefText("secondaryKeywords").optional().default(""),
+  audience: briefText("audience").optional().default(""),
+  tone: briefText("tone").optional().default("Practical and direct"),
   length: z.enum(["short", "standard", "long"]).default("standard"),
-  notes: z.string().trim().max(4000).optional().default(""),
+  notes: briefText("notes").optional().default(""),
   category: z.string().trim().max(80).optional().default(""),
 });
 
